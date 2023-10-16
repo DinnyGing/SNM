@@ -99,23 +99,23 @@ def back_propagation(outputs_1, outputs_2, inputs, expected_predict):
         calc_bias_0_1[0], calc_bias_1_2[0]
 
 def SGD(X, y):
-    calc_weights_1_2 = weights_1_2
-    calc_weights_0_1 = weights_0_1
-    calc_bias_1_2 = bias_1_2
-    calc_bias_0_1 = bias_0_1
+    calc_weights_1_2 = []
+    calc_weights_0_1 = []
+    calc_bias_1_2 = []
+    calc_bias_0_1 = []
     for i in range(0, len(X), batch_size):
         # Forward pass
         batch_input = X[i:i+batch_size].reshape(-1, input_layer_count)
         batch_labels = y[i:i+batch_size]
 
-        inputs_1 = np.dot(batch_input, weights_0_1.T)
+        inputs_1 = np.dot(batch_input, weights_0_1[i:i+batch_size].T)
         for i in range(len(inputs_1.T)):
-            inputs_1.T[i] += bias_0_1[i]
+            inputs_1.T[i] += bias_0_1[i:i+batch_size][i]
         outputs_1 = fun_l1(inputs_1)
 
-        inputs_2 = np.dot(outputs_1, weights_1_2.T)
+        inputs_2 = np.dot(outputs_1, weights_1_2[i:i+batch_size].T)
         for i in range(len(inputs_2.T)):
-            inputs_2.T[i] += bias_1_2[i]
+            inputs_2.T[i] += bias_1_2[i:i+batch_size][i]
         outputs_2 = fun_l2(inputs_2)
 
         # Calculate the error
@@ -125,13 +125,13 @@ def SGD(X, y):
         batch_labels_expected = np.array(batch_labels_expected)
         error_layer_2 = outputs_2 - batch_labels_expected
         weights_delta_layer_2 = error_layer_2 * fun_back_l2(outputs_2)
-        calc_weights_1_2 = weights_1_2 - learning_rate * (outputs_1 @ weights_delta_layer_2).T
-        calc_bias_1_2 = bias_1_2 - learning_rate * weights_delta_layer_2
+        calc_weights_1_2.append(weights_1_2[i:i+batch_size] - learning_rate * (outputs_1 @ weights_delta_layer_2).T)
+        calc_bias_1_2.append(bias_1_2[i:i+batch_size] - learning_rate * weights_delta_layer_2)
 
         error_layer_1 = weights_delta_layer_2.dot(weights_1_2)
         weights_delta_layer_1 = error_layer_1 * fun_back_l1(outputs_1)
-        calc_weights_0_1 = weights_0_1 - learning_rate * (batch_input @ weights_delta_layer_1).T
-        calc_bias_0_1 = bias_0_1 - learning_rate * weights_delta_layer_1
+        calc_weights_0_1.append(weights_0_1[i:i+batch_size] - learning_rate * (batch_input @ weights_delta_layer_1).T)
+        calc_bias_0_1.append(bias_0_1[i:i+batch_size] - learning_rate * weights_delta_layer_1)
     return calc_weights_0_1, calc_weights_1_2, \
         calc_bias_0_1[0], calc_bias_1_2[0]
 
@@ -203,8 +203,11 @@ for e in range(epochs):
         #     bias_0_1, bias_1_2 = train(np.array(labels), expected)
         inputs_.append(np.array(labels))
         correct_predictions.append(np.array(expected))
+
+    # here test
     weights_0_1, weights_1_2, \
         bias_0_1, bias_1_2 = SGD(np.array(train_data), train_labels)
+    #here end test
     train_loss = categorical_crossentropy(np.array(correct_predictions),
                                           predict(np.array(inputs_).T).T)
 

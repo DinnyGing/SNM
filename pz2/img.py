@@ -260,6 +260,7 @@ def adagrad_optimizer(X, y):
         batch_input = X[i:i+batch_size].reshape(-1, input_layer_count)
         batch_labels = y[i:i+batch_size]
 
+        # Прямое распространение
         inputs_1 = np.dot(batch_input, calc_weights_0_1.T)
         for j in range(len(inputs_1.T)):
             inputs_1.T[j] += calc_bias_0_1[j]
@@ -270,22 +271,26 @@ def adagrad_optimizer(X, y):
             inputs_2.T[j] += calc_bias_1_2[j]
         outputs_2 = fun_l2(inputs_2)
 
+        # Вычисление ошибки
         batch_labels_expected = [expect(label) for label in batch_labels]
         error_layer_2 = outputs_2 - batch_labels_expected
-        weights_delta_layer_2 = error_layer_2 * fun_back_l2(outputs_2)
 
+        # Обратное распространение
+        weights_delta_layer_2 = error_layer_2 * fun_back_l2(outputs_2)
+        error_layer_1 = weights_delta_layer_2.dot(calc_weights_1_2)
+        weights_delta_layer_1 = error_layer_1 * fun_back_l1(outputs_1)
+
+        # Обновление весов и смещений
         historical_gradient_squared_1_2 += (weights_delta_layer_2.T ** 2)
         calc_weights_1_2 -= (learning_rate / (np.sqrt(historical_gradient_squared_1_2 + epsilon))) * (outputs_1 @ weights_delta_layer_2).T
         calc_bias_1_2 -= (learning_rate / (np.sqrt(np.sum(weights_delta_layer_2, axis=0) + epsilon)))
-
-        error_layer_1 = weights_delta_layer_2.dot(calc_weights_1_2)
-        weights_delta_layer_1 = error_layer_1 * fun_back_l1(outputs_1)
 
         historical_gradient_squared_0_1 += (weights_delta_layer_1 ** 2)
         calc_weights_0_1 -= (learning_rate / (np.sqrt(historical_gradient_squared_0_1 + epsilon))) * (batch_input @ weights_delta_layer_1).T
         calc_bias_0_1 -= (learning_rate / (np.sqrt(np.sum(weights_delta_layer_1, axis=0) + epsilon)))
 
     return calc_weights_0_1, calc_weights_1_2, calc_bias_0_1, calc_bias_1_2
+
 
 
 
@@ -361,7 +366,7 @@ for e in range(epochs):
 
     # here test
     weights_0_1, weights_1_2, \
-        bias_0_1, bias_1_2 = adam_optimizer(np.array(train_data), train_labels)
+        bias_0_1, bias_1_2 = adagrad_optimizer(np.array(train_data), train_labels)
     #here end test
     train_loss = categorical_crossentropy(np.array(correct_predictions),
                                           predict(np.array(inputs_).T).T)

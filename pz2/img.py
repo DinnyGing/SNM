@@ -242,7 +242,7 @@ def adam_optimizer(X, y):
         calc_weights_0_1 -= learning_rate * (m_t_hat_0_1 / (np.sqrt(v_t_hat_0_1) + epsilon)).T
         calc_bias_0_1 -= learning_rate * np.mean(weights_delta_layer_1, axis=0)
 
-    return calc_weights_0_1, calc_weights_1_2, calc_bias_0_1, calc_bias_1_2
+        return calc_weights_0_1, calc_weights_1_2, calc_bias_0_1, calc_bias_1_2
 
 
 def adagrad_optimizer(X, y):
@@ -361,7 +361,7 @@ for e in range(epochs):
 
     # here test
     weights_0_1, weights_1_2, \
-        bias_0_1, bias_1_2 = adagrad_optimizer(np.array(train_data), train_labels)
+        bias_0_1, bias_1_2 = adam_optimizer(np.array(train_data), train_labels)
     #here end test
     train_loss = categorical_crossentropy(np.array(correct_predictions),
                                           predict(np.array(inputs_).T).T)

@@ -98,6 +98,7 @@ def back_propagation(outputs_1, outputs_2, inputs, expected_predict):
     return calc_weights_0_1, calc_weights_1_2, \
         calc_bias_0_1[0], calc_bias_1_2[0]
 
+
 def SGD(X, y):
     calc_weights_1_2 = weights_1_2
     calc_weights_0_1 = weights_0_1
@@ -136,6 +137,161 @@ def SGD(X, y):
             calc_bias_0_1 -= learning_rate * weights_delta_layer_1[j]
     return calc_weights_0_1, calc_weights_1_2, \
         calc_bias_0_1, calc_bias_1_2
+
+
+def rmsprop_optimizer(X, y):
+    calc_weights_1_2 = np.copy(weights_1_2)
+    calc_weights_0_1 = np.copy(weights_0_1)
+    calc_bias_1_2 = np.copy(bias_1_2)
+    calc_bias_0_1 = np.copy(bias_0_1)
+
+    epsilon = 1e-8
+    rho = 0.9  # Decay factor
+
+    moving_average_squared_1_2 = np.zeros_like(weights_1_2)
+    moving_average_squared_0_1 = np.zeros_like(weights_0_1)
+
+    for i in range(0, len(X), batch_size):
+
+        batch_input = X[i:i+batch_size].reshape(-1, input_layer_count)
+        batch_labels = y[i:i+batch_size]
+
+        inputs_1 = np.dot(batch_input, calc_weights_0_1.T)
+        for j in range(len(inputs_1.T)):
+            inputs_1.T[j] += calc_bias_0_1[j]
+        outputs_1 = fun_l1(inputs_1)
+
+        inputs_2 = np.dot(outputs_1, calc_weights_1_2.T)
+        for j in range(len(inputs_2.T)):
+            inputs_2.T[j] += calc_bias_1_2[j]
+        outputs_2 = fun_l2(inputs_2)
+
+        batch_labels_expected = [expect(label) for label in batch_labels]
+        error_layer_2 = outputs_2 - batch_labels_expected
+        weights_delta_layer_2 = error_layer_2 * fun_back_l2(outputs_2)
+
+        moving_average_squared_1_2 = rho * moving_average_squared_1_2 + (1 - rho) * (weights_delta_layer_2.T ** 2)
+        calc_weights_1_2 -= (learning_rate / (np.sqrt(moving_average_squared_1_2 + epsilon))) * (outputs_1 @ weights_delta_layer_2).T
+        calc_bias_1_2 -= (learning_rate / (np.sqrt(np.sum(weights_delta_layer_2, axis=0) + epsilon)))
+
+        error_layer_1 = weights_delta_layer_2.dot(calc_weights_1_2)
+        weights_delta_layer_1 = error_layer_1 * fun_back_l1(outputs_1)
+
+        moving_average_squared_0_1 = rho * moving_average_squared_0_1 + (1 - rho) * (weights_delta_layer_1 ** 2)
+        calc_weights_0_1 -= (learning_rate / (np.sqrt(moving_average_squared_0_1 + epsilon))) * (batch_input @ weights_delta_layer_1).T
+        calc_bias_0_1 -= (learning_rate / (np.sqrt(np.sum(weights_delta_layer_1, axis=0) + epsilon)))
+
+    return calc_weights_0_1, calc_weights_1_2, calc_bias_0_1, calc_bias_1_2
+
+
+def adam_optimizer(X, y):
+    m = len(X)
+    calc_weights_1_2 = np.copy(weights_1_2)
+    calc_weights_0_1 = np.copy(weights_0_1)
+    calc_bias_1_2 = np.copy(bias_1_2)
+    calc_bias_0_1 = np.copy(bias_0_1)
+
+    beta1 = 0.9
+    beta2 = 0.999
+    epsilon = 1e-8
+    t = 0
+
+    m_t_1_2 = np.zeros_like(weights_1_2)
+    v_t_1_2 = np.zeros_like(weights_1_2)
+    m_t_0_1 = np.zeros_like(weights_0_1)
+    v_t_0_1 = np.zeros_like(weights_0_1)
+
+    for i in range(0, len(X), batch_size):
+        t += 1
+        batch_input = X[i:i+batch_size].reshape(-1, input_layer_count)
+        batch_labels = y[i:i+batch_size]
+
+        inputs_1 = np.dot(batch_input, calc_weights_0_1.T)
+        for j in range(len(inputs_1.T)):
+            inputs_1.T[j] += calc_bias_0_1[j]
+        outputs_1 = fun_l1(inputs_1)
+
+        inputs_2 = np.dot(outputs_1, calc_weights_1_2.T)
+        for j in range(len(inputs_2.T)):
+            inputs_2.T[j] += calc_bias_1_2[j]
+        outputs_2 = fun_l2(inputs_2)
+
+        batch_labels_expected = [expect(label) for label in batch_labels]
+        error_layer_2 = outputs_2 - batch_labels_expected
+        weights_delta_layer_2 = error_layer_2 * fun_back_l2(outputs_2)
+
+        m_t_1_2_batch = np.sum(weights_delta_layer_2, axis=0)
+        m_t_1_2_batch = m_t_1_2_batch.reshape((output_layer_count,))
+        m_t_1_2 = beta1 * m_t_1_2 + (1 - beta1) * m_t_1_2_batch
+
+        v_t_1_2 = beta2 * v_t_1_2 + (1 - beta2) * (weights_delta_layer_2 ** 2)
+
+        error_layer_1 = weights_delta_layer_2.dot(calc_weights_1_2)
+        weights_delta_layer_1 = error_layer_1 * fun_back_l1(outputs_1)
+        m_t_0_1 = beta1 * m_t_0_1 + (1 - beta1) * weights_delta_layer_1
+        v_t_0_1 = beta2 * v_t_0_1 + (1 - beta2) * (weights_delta_layer_1 ** 2)
+
+        m_t_hat_1_2 = m_t_1_2 / (1 - beta1 ** t)
+        v_t_hat_1_2 = v_t_1_2 / (1 - beta2 ** t)
+
+        m_t_hat_0_1 = m_t_0_1 / (1 - beta1 ** t)
+        v_t_hat_0_1 = v_t_0_1 / (1 - beta2 ** t)
+
+        calc_weights_1_2 -= learning_rate * (m_t_hat_1_2 / (np.sqrt(v_t_hat_1_2) + epsilon)).T
+        calc_bias_1_2 -= learning_rate * np.mean(m_t_1_2_batch, axis=0)
+
+        calc_weights_0_1 -= learning_rate * (m_t_hat_0_1 / (np.sqrt(v_t_hat_0_1) + epsilon)).T
+        calc_bias_0_1 -= learning_rate * np.mean(weights_delta_layer_1, axis=0)
+
+        return calc_weights_0_1, calc_weights_1_2, calc_bias_0_1, calc_bias_1_2
+
+
+def adagrad_optimizer(X, y):
+    calc_weights_1_2 = np.copy(weights_1_2)
+    calc_weights_0_1 = np.copy(weights_0_1)
+    calc_bias_1_2 = np.copy(bias_1_2)
+    calc_bias_0_1 = np.copy(bias_0_1)
+
+    epsilon = 1e-8
+
+    historical_gradient_squared_1_2 = np.zeros_like(weights_1_2)
+    historical_gradient_squared_0_1 = np.zeros_like(weights_0_1)
+
+    for i in range(0, len(X), batch_size):
+        batch_input = X[i:i+batch_size].reshape(-1, input_layer_count)
+        batch_labels = y[i:i+batch_size]
+
+        # Прямое распространение
+        inputs_1 = np.dot(batch_input, calc_weights_0_1.T)
+        for j in range(len(inputs_1.T)):
+            inputs_1.T[j] += calc_bias_0_1[j]
+        outputs_1 = fun_l1(inputs_1)
+
+        inputs_2 = np.dot(outputs_1, calc_weights_1_2.T)
+        for j in range(len(inputs_2.T)):
+            inputs_2.T[j] += calc_bias_1_2[j]
+        outputs_2 = fun_l2(inputs_2)
+
+        # Вычисление ошибки
+        batch_labels_expected = [expect(label) for label in batch_labels]
+        error_layer_2 = outputs_2 - batch_labels_expected
+
+        # Обратное распространение
+        weights_delta_layer_2 = error_layer_2 * fun_back_l2(outputs_2)
+        error_layer_1 = weights_delta_layer_2.dot(calc_weights_1_2)
+        weights_delta_layer_1 = error_layer_1 * fun_back_l1(outputs_1)
+
+        # Обновление весов и смещений
+        historical_gradient_squared_1_2 += (weights_delta_layer_2.T ** 2)
+        calc_weights_1_2 -= (learning_rate / (np.sqrt(historical_gradient_squared_1_2 + epsilon))) * (outputs_1 @ weights_delta_layer_2).T
+        calc_bias_1_2 -= (learning_rate / (np.sqrt(np.sum(weights_delta_layer_2, axis=0) + epsilon)))
+
+        historical_gradient_squared_0_1 += (weights_delta_layer_1 ** 2)
+        calc_weights_0_1 -= (learning_rate / (np.sqrt(historical_gradient_squared_0_1 + epsilon))) * (batch_input @ weights_delta_layer_1).T
+        calc_bias_0_1 -= (learning_rate / (np.sqrt(np.sum(weights_delta_layer_1, axis=0) + epsilon)))
+
+    return calc_weights_0_1, calc_weights_1_2, calc_bias_0_1, calc_bias_1_2
+
 
 def train(inputs, expected_predict):
     outputs_1, outputs_2 = forward_propagation(inputs)

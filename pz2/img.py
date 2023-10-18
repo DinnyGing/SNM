@@ -157,29 +157,37 @@ def rmsprop_optimizer(X, y):
         batch_labels = y[i:i+batch_size]
 
         inputs_1 = np.dot(batch_input, calc_weights_0_1.T)
-        for j in range(len(inputs_1.T)):
-            inputs_1.T[j] += calc_bias_0_1[j]
+        for j in range(len(inputs_1)):
+            inputs_1[j] += calc_bias_0_1
         outputs_1 = fun_l1(inputs_1)
 
         inputs_2 = np.dot(outputs_1, calc_weights_1_2.T)
-        for j in range(len(inputs_2.T)):
-            inputs_2.T[j] += calc_bias_1_2[j]
+        for j in range(len(inputs_2)):
+            inputs_2[j] += calc_bias_1_2
         outputs_2 = fun_l2(inputs_2)
 
         batch_labels_expected = [expect(label) for label in batch_labels]
-        error_layer_2 = outputs_2 - batch_labels_expected
+        error_layer_2 = outputs_2 - np.array(batch_labels_expected)
         weights_delta_layer_2 = error_layer_2 * fun_back_l2(outputs_2)
 
-        moving_average_squared_1_2 = rho * moving_average_squared_1_2 + (1 - rho) * (weights_delta_layer_2.T ** 2)
-        calc_weights_1_2 -= (learning_rate / (np.sqrt(moving_average_squared_1_2 + epsilon))) * (outputs_1 @ weights_delta_layer_2).T
-        calc_bias_1_2 -= (learning_rate / (np.sqrt(np.sum(weights_delta_layer_2, axis=0) + epsilon)))
+        w2_sq = (outputs_1.T @ weights_delta_layer_2) ** 2
+        moving_average_squared_1_2 = rho * moving_average_squared_1_2 + (1 - rho) * (w2_sq).T
+        calc_weights_1_2 -= learning_rate * ((outputs_1.T @ weights_delta_layer_2).T / (np.sqrt(moving_average_squared_1_2) + epsilon))
+        try:
+            calc_bias_1_2 -= learning_rate / (np.sqrt(np.sum(weights_delta_layer_2, axis=0) + epsilon))
+        except RuntimeWarning:
+            pass
 
         error_layer_1 = weights_delta_layer_2.dot(calc_weights_1_2)
         weights_delta_layer_1 = error_layer_1 * fun_back_l1(outputs_1)
 
-        moving_average_squared_0_1 = rho * moving_average_squared_0_1 + (1 - rho) * (weights_delta_layer_1 ** 2)
-        calc_weights_0_1 -= (learning_rate / (np.sqrt(moving_average_squared_0_1 + epsilon))) * (batch_input @ weights_delta_layer_1).T
-        calc_bias_0_1 -= (learning_rate / (np.sqrt(np.sum(weights_delta_layer_1, axis=0) + epsilon)))
+        w1_sq = (batch_input.T @ weights_delta_layer_1) ** 2
+        moving_average_squared_0_1 = rho * moving_average_squared_0_1 + (1 - rho) * (w1_sq).T
+        calc_weights_0_1 -= learning_rate * ((batch_input.T @ weights_delta_layer_1).T / (np.sqrt(moving_average_squared_0_1) + epsilon))
+        try:
+            calc_bias_0_1 -= learning_rate / (np.sqrt(np.sum(weights_delta_layer_1, axis=0) + epsilon))
+        except RuntimeWarning:
+            pass
 
     return calc_weights_0_1, calc_weights_1_2, calc_bias_0_1, calc_bias_1_2
 
@@ -340,12 +348,20 @@ bias_0_1 = np.zeros(hide_layer_count)
 bias_1_2 = np.zeros(output_layer_count)
 
 epochs = 5
-learning_rate = 0.017
+learning_rate = 0.07
 batch_size = 32
 fun_l1 = tanh
 fun_l2 = sigmoid
 fun_back_l1 = tanh_backward
 fun_back_l2 = sigmoid_backward
+#
+# epochs = 5
+# learning_rate = 0.017
+# batch_size = 32
+# fun_l1 = tanh
+# fun_l2 = sigmoid
+# fun_back_l1 = tanh_backward
+# fun_back_l2 = sigmoid_backward
 train_data = train_data.reshape(len(train_data), input_layer_count)
 
 for e in range(epochs):
@@ -361,7 +377,7 @@ for e in range(epochs):
 
     # here test
     weights_0_1, weights_1_2, \
-        bias_0_1, bias_1_2 = SGD(np.array(train_data), train_labels)
+        bias_0_1, bias_1_2 = rmsprop_optimizer(np.array(train_data), train_labels)
     #here end test
     train_loss = categorical_crossentropy(np.array(correct_predictions),
                                           predict(np.array(inputs_).T).T)

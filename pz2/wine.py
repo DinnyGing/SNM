@@ -1,5 +1,12 @@
-import idx2numpy
+
 import numpy as np
+import pandas as pd
+
+def normalize_data(data, attributes):
+    for attribute in attributes:
+        data[attribute] = round((data[attribute] - data[attribute].min())/
+                                (data[attribute].max() - data[attribute].min()) * 1000)/1000
+    return data
 
 def mix_and_separate_data(data):
     n = data.shape[0]
@@ -104,7 +111,7 @@ def sgd(X, y):
     calc_bias_0_1 = bias_0_1
     for i in range(0, len(X), batch_size):
         # Forward pass
-        batch_input = X[i:i+batch_size].reshape(-1, input_layer_count)
+        batch_input = X[i:i+batch_size]
         batch_labels = y[i:i+batch_size]
 
         inputs_1 = np.dot(batch_input, weights_0_1.T)
@@ -119,11 +126,12 @@ def sgd(X, y):
 
         # Calculate the error
         batch_labels_expected = []
-        for j in range(len(batch_labels)):
-            batch_labels_expected.append(expect(batch_labels[j]))
+        for out in batch_labels:
+            batch_labels_expected.append(expect(out))
         batch_labels_expected = np.array(batch_labels_expected)
         error_layer_2 = outputs_2 - batch_labels_expected
         weights_delta_layer_2 = error_layer_2 * fun_back_l2(outputs_2)
+
         calc_weights_1_2 -= learning_rate * (outputs_1.T @ weights_delta_layer_2).T
         for j in range(len(weights_delta_layer_2)):
             calc_bias_1_2 -= learning_rate * weights_delta_layer_2[j]
@@ -187,6 +195,7 @@ def rmsprop_optimizer(X, y):
 
 
 def adam_optimizer(X, y):
+    m = len(X)
     calc_weights_1_2 = np.copy(weights_1_2)
     calc_weights_0_1 = np.copy(weights_0_1)
     calc_bias_1_2 = np.copy(bias_1_2)
@@ -204,7 +213,7 @@ def adam_optimizer(X, y):
 
     for i in range(0, len(X), batch_size):
         t += 1
-        batch_input = X[i:i+batch_size].reshape(-1, input_layer_count)
+        batch_input = X[i:i+batch_size]
         batch_labels = y[i:i+batch_size]
 
         inputs_1 = np.dot(batch_input, calc_weights_0_1.T)
@@ -259,7 +268,7 @@ def adagrad_optimizer(X, y):
     historical_gradient_squared_0_1 = np.zeros_like(weights_0_1)
 
     for i in range(0, len(X), batch_size):
-        batch_input = X[i:i+batch_size].reshape(-1, input_layer_count)
+        batch_input = X[i:i+batch_size]
         batch_labels = y[i:i+batch_size]
 
         # Прямое распространение
@@ -306,8 +315,9 @@ def train(inputs, expected_predict):
 
 def test(inputs, outputs):
     accuracy = 0
-    for index in range(len(inputs)):
-        labels = inputs[index].reshape(1, -1)[0]
+
+    for index, input in inputs.iterrows():
+        labels = input
         actual = predict(np.array(labels))
         pos = outputs[index]
         for i in range(len(actual)):
@@ -331,52 +341,48 @@ def get_attributes(columns, target):
             attributes.append(column)
     return attributes
 
-train_data = np.array(idx2numpy.convert_from_file("train-images.idx3-ubyte"))
-train_labels = np.array(idx2numpy.convert_from_file("train-labels.idx1-ubyte"))
-test_data = np.array(idx2numpy.convert_from_file("t10k-images.idx3-ubyte"))
-test_labels = np.array(idx2numpy.convert_from_file("t10k-labels.idx1-ubyte"))
+wine_data = pd.read_csv('wine.data', header=None)
+wine_data = assign_class_number(wine_data, 0)
+wine_data = normalize_data(wine_data, get_attributes(wine_data.columns, 0))
+mix_iris_data = mix_and_separate_data(wine_data)
+train_data = mix_iris_data["train"]
+train_labels = train_data[0]
+train_data = train_data.drop(0, axis=1)
+test_data = mix_iris_data["test"]
+test_labels = test_data[0]
+test_data = test_data.drop(0, axis=1)
 
-hide_layer_count = 128
-input_layer_count = len(train_data[0]) * len(test_data[0][0])
-output_layer_count = 10
+hide_layer_count = 8
+input_layer_count = 13
+output_layer_count = 3
 weights_0_1 = np.random.normal(-0.5, 0.5, (hide_layer_count, input_layer_count))
 weights_1_2 = np.random.normal(-0.5, 0.5 ** -0.5, (output_layer_count, hide_layer_count))
 
 bias_0_1 = np.zeros(hide_layer_count)
 bias_1_2 = np.zeros(output_layer_count)
-#adam
-# epochs = 20
-# learning_rate = 0.27
-# batch_size = 32
+
+# sgd, r
+# epochs = 50
+# learning_rate = 0.07
+# batch_size = 16
 # fun_l1 = tanh
 # fun_l2 = sigmoid
 # fun_back_l1 = tanh_backward
 # fun_back_l2 = sigmoid_backward
-
-#adaGrad
-epochs = 6
-learning_rate = 0.27
-batch_size = 32
+#adam, adaGrad
+epochs = 50
+learning_rate = 0.02
+batch_size = 16
 fun_l1 = tanh
 fun_l2 = sigmoid
 fun_back_l1 = tanh_backward
 fun_back_l2 = sigmoid_backward
 
-# epochs = 5
-# learning_rate = 0.017
-# batch_size = 32
-# fun_l1 = tanh
-# fun_l2 = sigmoid
-# fun_back_l1 = tanh_backward
-# fun_back_l2 = sigmoid_backward
-train_data = train_data.reshape(len(train_data), input_layer_count)
-
 for e in range(epochs):
     inputs_ = []
     correct_predictions = []
-    for index in range(len(train_data)):
-        labels = train_data[index].reshape(1, -1)[0]
-        expected = expect(train_labels[index])
+    for (_, labels), output in zip(train_data.iterrows(), train_labels):
+        expected = expect(output)
         inputs_.append(np.array(labels))
         correct_predictions.append(np.array(expected))
 

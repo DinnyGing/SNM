@@ -6,4 +6,7 @@
     <orderEntry type="jdk" jdkName="Python 3.9 (untitled2) (2)" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
   </component>
+  <component name="SonarLintModuleSettings">
+    <option name="uniqueId" value="d3af8d0b-ef39-4008-a778-b405a69d095b" />
+  </component>
 </module>

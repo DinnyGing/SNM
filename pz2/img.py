@@ -1,3 +1,5 @@
+import time
+
 import idx2numpy
 import numpy as np
 
@@ -353,8 +355,8 @@ bias_1_2 = np.zeros(output_layer_count)
 # fun_back_l1 = tanh_backward
 # fun_back_l2 = sigmoid_backward
 
-#adaGrad
-epochs = 6
+#adam
+epochs = 25
 learning_rate = 0.27
 batch_size = 32
 fun_l1 = tanh
@@ -371,6 +373,7 @@ fun_back_l2 = sigmoid_backward
 # fun_back_l2 = sigmoid_backward
 train_data = train_data.reshape(len(train_data), input_layer_count)
 
+start_time = time.time()
 for e in range(epochs):
     inputs_ = []
     correct_predictions = []
@@ -382,7 +385,7 @@ for e in range(epochs):
 
     # here test
     weights_0_1, weights_1_2, \
-        bias_0_1, bias_1_2 = adagrad_optimizer(np.array(train_data), train_labels)
+        bias_0_1, bias_1_2 = adam_optimizer(np.array(train_data), train_labels)
     #here end test
     train_loss = categorical_crossentropy(np.array(correct_predictions),
                                           predict(np.array(inputs_).T).T)
@@ -392,5 +395,9 @@ for e in range(epochs):
         progress = str(progress)[:4]
         print("\rProgress: " + progress + " Training loss: ")
         print(train_loss)
+end_time = time.time()
+
+execution_time = end_time - start_time
+print(f"Час виконання: {execution_time} секунд")
 
 print("Accuracy: " + str(test(test_data, test_labels)))

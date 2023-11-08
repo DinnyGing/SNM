@@ -1,3 +1,4 @@
+import time
 
 import numpy as np
 import pandas as pd
@@ -195,7 +196,6 @@ def rmsprop_optimizer(X, y):
 
 
 def adam_optimizer(X, y):
-    m = len(X)
     calc_weights_1_2 = np.copy(weights_1_2)
     calc_weights_0_1 = np.copy(weights_0_1)
     calc_bias_1_2 = np.copy(bias_1_2)
@@ -361,15 +361,6 @@ weights_1_2 = np.random.normal(-0.5, 0.5 ** -0.5, (output_layer_count, hide_laye
 bias_0_1 = np.zeros(hide_layer_count)
 bias_1_2 = np.zeros(output_layer_count)
 
-# sgd, r
-# epochs = 50
-# learning_rate = 0.07
-# batch_size = 16
-# fun_l1 = tanh
-# fun_l2 = sigmoid
-# fun_back_l1 = tanh_backward
-# fun_back_l2 = sigmoid_backward
-#adam, adaGrad
 epochs = 50
 learning_rate = 0.02
 batch_size = 16
@@ -378,6 +369,7 @@ fun_l2 = sigmoid
 fun_back_l1 = tanh_backward
 fun_back_l2 = sigmoid_backward
 
+start_time = time.time()
 for e in range(epochs):
     inputs_ = []
     correct_predictions = []
@@ -398,5 +390,9 @@ for e in range(epochs):
         progress = str(progress)[:4]
         print("\rProgress: " + progress + " Training loss: ")
         print(train_loss)
+end_time = time.time()
+
+execution_time = end_time - start_time
+print(f"Час виконання: {execution_time} секунд")
 
 print("Accuracy: " + str(test(test_data, test_labels)))

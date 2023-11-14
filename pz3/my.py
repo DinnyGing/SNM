@@ -1,5 +1,6 @@
 import math
 
+from matplotlib import pyplot as plt
 from sklearn.datasets import make_moons
 from sklearn.preprocessing import StandardScaler
 import numpy as np
@@ -78,7 +79,7 @@ scaler = StandardScaler()
 X = scaler.fit_transform(X)
 
 input_layer = 2
-output_layer = 9
+output_layer = 2
 sigma = 3
 trained_weights = np.random.normal(-0.5, 0.5, (output_layer, input_layer))
 epochs = 100
@@ -89,3 +90,20 @@ for e in range(epochs):
     print("Quantization Error:", quantization_err)
     topographic_err = topographic_error(X, trained_weights)
     print("Topographic Error:", topographic_err)
+
+
+result = []
+for i, input_data in enumerate(X):
+    result.append(find_best_matching_unit(input_data, trained_weights))
+
+plt.scatter(X[:, 0], X[:, 1], c=y, cmap='viridis', edgecolors='k')
+plt.title('Moons Dataset')
+plt.xlabel('Feature 1')
+plt.ylabel('Feature 2')
+plt.show()
+
+plt.scatter(X[:, 0], X[:, 1], c=result, cmap='viridis', edgecolors='k')
+plt.title('Moons Dataset with SOM')
+plt.xlabel('Feature 1')
+plt.ylabel('Feature 2')
+plt.show()

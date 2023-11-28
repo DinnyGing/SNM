@@ -72,7 +72,7 @@ def find_neighbors(unit_index, som_weights):
 
 
 
-X, y = make_moons(n_samples=200, noise=0.05, random_state=42)
+X, y = make_moons(n_samples=300, noise=0.06, random_state=42)
 
 # Стандартизація даних
 scaler = StandardScaler()

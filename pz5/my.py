@@ -29,9 +29,9 @@ class LVQ:
                 else:
                     self.weights[win] -= self.alpha * (xi - self.weights[win])
 
-    def predict(self, X, y):
+    def predict(self, X):
         values = []
-        for xi, yi in zip(X, y):
+        for xi in X:
             win = self.best_match(xi)
             values.append(win)
         return values
@@ -85,7 +85,7 @@ x_train, x_test, y_train, y_test = train_test_split(data, target, test_size=0.25
 
 lvq = LVQ(4, 3)
 lvq.train(x_train, y_train)
-y_pred = lvq.predict(x_test, y_test)
+y_pred = lvq.predict(x_test)
 accuracy = accuracy(y_test, y_pred)
 precision = precision(y_test, y_pred, 3)
 recall = recall(y_test, y_pred, 3)
